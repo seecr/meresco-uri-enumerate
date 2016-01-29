@@ -14,7 +14,6 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field.Store;
 import org.apache.lucene.document.NumericDocValuesField;
 import org.apache.lucene.document.StringField;
-import org.apache.lucene.facet.taxonomy.LRUHashMap;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
@@ -26,23 +25,20 @@ import org.apache.lucene.index.PostingsEnum;
 import org.apache.lucene.index.SerialMergeScheduler;
 import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.store.FSDirectory;
-import org.apache.lucene.util.Bits;
-import org.apache.lucene.util.Bits.MatchAllBits;
 import org.apache.lucene.util.BytesRef;
 
 public class UriEnumerate {
 
 	private static final int CACHE_SIZE = 1 * 1000;
-	private static final MatchAllBits ALL_DOCS = new Bits.MatchAllBits(Integer.MAX_VALUE);
 	private static final String URI_FIELD = "uri_index";
 	private static final String ORD_INDEX_FIELD = "ord_index";
 	private static final String ORD_VALUE_FIELD = "ord_value";
 
 	private static class UriMapDocument {
-		private Document doc = new Document();
-		private StringField uri_index = new StringField(URI_FIELD, "", Store.YES);
-		private NumericDocValuesField ord_value = new NumericDocValuesField(ORD_VALUE_FIELD, 0);
-		private OrdField ord_index = new OrdField(ORD_INDEX_FIELD, Store.NO);
+		private final StringField uri_index = new StringField(URI_FIELD, "", Store.YES);
+		private final NumericDocValuesField ord_value = new NumericDocValuesField(ORD_VALUE_FIELD, 0);
+		private final OrdField ord_index = new OrdField(ORD_INDEX_FIELD, Store.NO);
+		private final Document doc = new Document();
 		{
 			this.doc.add(this.uri_index);
 			this.doc.add(this.ord_value);
@@ -70,38 +66,38 @@ public class UriEnumerate {
 	private IndexWriter writer;
 	private UriMapDocument doc_proto = new UriMapDocument();
 	private Map<Object, NumericDocValues> ordscache = new WeakHashMap<Object, NumericDocValues>();
-	private Map<String, Integer> cache;
+	private Cache cache;
 	private int next_ord;
-	private int adds;
-	private int max_cache_size;
 	private DirectoryReader reader;
 
 	public UriEnumerate(Path path, int max_cache_size) throws IOException {
 		IndexWriterConfig config = new IndexWriterConfig(null);
-		config.setCodec(new Lucene54Codec() {
-			@Override
-			public PostingsFormat getPostingsFormatForField(String field) {
-				return new BloomFilteringPostingsFormat(new MemoryPostingsFormat()); // + disk + in memory (how
-																						// different from
-																						// DirectPostingsFormat:
-																						// compressed)
-			}
-		});
+		/*
+		 * The idea behind this merge config is to avoid useless background merging and instead synchronize merging with the reopen calls. For now, all merging happens when openIfChanged is called,
+		 * but this may be done in a carefully sync'ed thread.
+		 */
 		config.setMergeScheduler(new SerialMergeScheduler());
 		LogDocMergePolicy mp = new LogDocMergePolicy();
 		mp.setMergeFactor(2);
 		mp.setMinMergeDocs(100000);
-		System.out.println(mp);
 		config.setMergePolicy(mp);
 		config.setRAMBufferSizeMB(Integer.MAX_VALUE); // no background flush
 		config.setMaxBufferedDocs(IndexWriterConfig.DISABLE_AUTO_FLUSH);
-		this.writer = new IndexWriter(FSDirectory.open(path), config.setUseCompoundFile(false));
+		/*
+		 * The idea behind this codec is to have the whole dictionary in memory, compressed as an FST. The Bloom filter gives a slight advantage in speed and costs only little memory and disk space.
+		 */
+		config.setCodec(new Lucene54Codec() {
+			@Override
+			public PostingsFormat getPostingsFormatForField(String field) {
+				return new BloomFilteringPostingsFormat(new MemoryPostingsFormat());
+			}
+		});
+		config.setUseCompoundFile(false);
+		this.writer = new IndexWriter(FSDirectory.open(path), config);
 		writer.commit();
 		this.reader = DirectoryReader.open(this.writer, false);
-		this.max_cache_size = max_cache_size;
-		this.cache = new LRUHashMap<String, Integer>(max_cache_size);
+		this.cache = new Cache(max_cache_size);
 		this.next_ord = writer.numDocs() + 1;
-		this.adds = 0;
 	}
 
 	public UriEnumerate(String string, int cache_size) throws IOException {
@@ -167,16 +163,16 @@ public class UriEnumerate {
 		int ord = this.next_ord++;
 		this.doc_proto.set(uri, ord);
 		writer.addDocument(this.doc_proto.doc);
-		this.adds++;
-		this.cache.put(uri, ord);
+		if (this.cache.put(uri, ord) != null)
+			throw new RuntimeException("Why did this happen? No unit-test throws me!");
+		this.maybeReopen();
 		return ord;
 	}
 
 	private void maybeReopen() {
-		if (this.adds > this.cache.size()) { // all cache might be invalid
+		if (this.cache.overflow()) { // all cache might be invalid
 			this.reOpen();
-			this.adds = 0;
-			//this.cache.clear();
+			this.cache.reset();
 		}
 	}
 
