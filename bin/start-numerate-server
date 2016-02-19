@@ -1,0 +1,43 @@
+#!/usr/bin/env python
+
+from os import execv, environ, system
+from sys import argv
+from glob import glob
+
+USR_SHARE_JAVA_DIR='/usr/share/java'
+LUCENEVERSION = "5.4.1"
+LUCENE_JARS = glob("{0}/lucene-*{1}.jar".format(USR_SHARE_JAVA_DIR, LUCENEVERSION))
+if 'SEECRTEST_USR_SHARE' in environ and environ['SEECRTEST_USR_SHARE']:
+    USR_SHARE_JAVA_DIR = environ['SEECRTEST_USR_SHARE'] + '/java'
+MY_JARS = glob('{0}/meresco-uri-enumerate/*.jar'.format(USR_SHARE_JAVA_DIR))
+
+from os.path import dirname, abspath                         #DO_NOT_DISTRIBUTE
+projectdir = dirname(dirname(abspath(__file__)))             #DO_NOT_DISTRIBUTE
+status = system("cd %s; ./build.sh"  % projectdir)           #DO_NOT_DISTRIBUTE
+if status > 0:                                               #DO_NOT_DISTRIBUTE
+    import sys                                               #DO_NOT_DISTRIBUTE
+    sys.exit(status)                                         #DO_NOT_DISTRIBUTE
+MY_JARS = glob("%s/jars/*.jar" % projectdir) + glob("%s/*.jar" % projectdir)  #DO_NOT_DISTRIBUTE
+
+CP = ':'.join(MY_JARS + LUCENE_JARS)
+print CP
+
+argv0, args = argv[0], [arg for arg in argv if not arg.startswith('-X')]
+XOptions = [arg for arg in argv if arg.startswith('-X')]
+if not [arg for arg in XOptions if arg.startswith('-Xmx')]:
+    XOptions.append('-Xmx4G')
+
+java = '/usr/bin/java'
+if 'JAVA_BIN' in environ and environ['JAVA_BIN']:
+    java = environ['JAVA_BIN'] + "/java"
+
+if system("%s -version 2>&1 | grep '1.7' > /dev/null" % java) != 0:
+    print "Java version should be java 7; You could specify a different java with JAVA_BIN"
+    exit(1)
+
+execv(
+    java,
+    [argv0] + XOptions + [
+        '-cp', CP,
+        'org.meresco.lucene.numerate.NumerateHttpServer'
+    ] + args)

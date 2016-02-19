@@ -58,12 +58,12 @@ public class NumerateHandler extends AbstractHandler implements Handler {
 		                return;
 		            }
 	            	break;
-	            
+
 	        	case "/numerate":
 		            String value = Utils.readFully(request.getReader());
 		            int number;
 		            try {
-		                number = uriEnumerate.get(value);
+		                number = uriEnumerate.put(value);
 		            } catch (Exception e) {
 		                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 		                response.getWriter().write(Utils.getStackTrace(e));
