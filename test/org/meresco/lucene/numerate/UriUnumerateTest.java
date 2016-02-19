@@ -1,11 +1,10 @@
-package org.meresco.lucenejena;
+package org.meresco.lucene.numerate;
 
 import static org.junit.Assert.assertEquals;
 
 import java.io.File;
 import java.io.IOException;
 
-import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -31,7 +30,7 @@ public class UriUnumerateTest {
             this.enumerate.close();
         } catch (Exception e) {
         }
-        FileUtils.deleteDirectory(new File(TESTDIR));
+        TestUtils.deleteDirectory(new File(TESTDIR));
     }
 
     @Test

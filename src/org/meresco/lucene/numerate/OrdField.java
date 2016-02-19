@@ -1,5 +1,7 @@
-package org.meresco.lucenejena;
+package org.meresco.lucene.numerate;
 
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.tokenattributes.BytesTermAttribute;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FieldType;
 import org.apache.lucene.index.IndexOptions;
@@ -42,5 +44,43 @@ public class OrdField extends Field {
 
 	public static BytesRef ord2bytes(int ord) {
 		return new BytesRef(new byte[] { (byte) (ord >> 24), (byte) (ord >> 16), (byte) (ord >> 8), (byte) ord });
+	}
+	
+	private static final class BinaryTokenStream extends TokenStream {
+	    private final BytesTermAttribute bytesAtt = addAttribute(BytesTermAttribute.class);
+	    private boolean used = true;
+	    private BytesRef value;
+	  
+	    /** Creates a new TokenStream that returns a BytesRef as single token.
+	     * <p>Warning: Does not initialize the value, you must call
+	     * {@link #setValue(BytesRef)} afterwards!
+	     */
+	    BinaryTokenStream() {
+	    }
+
+	    public void setValue(BytesRef value) {
+	      this.value = value;
+	    }
+	  
+	    @Override
+	    public boolean incrementToken() {
+	      if (used) {
+	        return false;
+	      }
+	      clearAttributes();
+	      bytesAtt.setBytesRef(value);
+	      used = true;
+	      return true;
+	    }
+	  
+	    @Override
+	    public void reset() {
+	      used = false;
+	    }
+
+	    @Override
+	    public void close() {
+	      value = null;
+	    }
 	}
 }

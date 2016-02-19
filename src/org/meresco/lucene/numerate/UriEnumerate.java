@@ -1,4 +1,4 @@
-package org.meresco.lucenejena;
+package org.meresco.lucene.numerate;
 
 import java.io.IOException;
 import java.nio.file.FileSystems;

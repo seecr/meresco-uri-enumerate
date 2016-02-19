@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="src" path="test"/>
+	<classpathentry kind="lib" path="jars/commons-cli-1.2.jar"/>
+	<classpathentry kind="lib" path="jars/javax.servlet-api-3.1.0.jar"/>
+	<classpathentry kind="lib" path="jars/jetty-all-9.2.14.v20151106.jar"/>
+	<classpathentry kind="lib" path="jars/lucene/lucene-core-5.4.1.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="jars/lucene/lucene-facet-5.4.1.jar"/>
+	<classpathentry kind="lib" path="jars/lucene/lucene-codecs-5.4.1.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
+	<classpathentry kind="output" path="bin-ecl"/>
+</classpath>

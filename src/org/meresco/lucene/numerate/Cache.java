@@ -1,4 +1,4 @@
-package org.meresco.lucenejena;
+package org.meresco.lucene.numerate;
 
 import org.apache.lucene.facet.taxonomy.LRUHashMap;
 
