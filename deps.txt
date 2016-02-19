@@ -1,2 +1,2 @@
-liblucene5-java (>> 5.4.1)
-liblucene5-java (<< 5.5)
+liblucene5-java (>> 1:5.4.1)
+liblucene5-java (<< 1:5.5)
