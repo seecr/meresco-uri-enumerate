@@ -25,16 +25,11 @@ public class FSTdict {
 
     public long get(String uri) throws IOException {
         if (this.fstbuilder.getTermCount() > 0L) {
-            System.out.println("TermCount: " + this.fstbuilder.getTermCount());
             FST<Long> fst = this.fstbuilder.finish();
-            System.out.println("TermCount: " + this.fstbuilder.getTermCount());
             if (fst != null)
                 this.brfstenum = new BytesRefFSTEnum<Long>(fst);
         }
         InputOutput<Long> seekExact = this.brfstenum.seekExact(new BytesRef(uri));
-        // System.out.println("Huh: " + this.brfstenum.next().input.utf8ToString());
-        // System.out.println("Huh: " + this.brfstenum.next().input.utf8ToString());
-        System.out.println("Huh: " + seekExact.input.utf8ToString());
         if (seekExact != null)
             return seekExact.output;
         return -1;
