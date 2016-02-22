@@ -136,7 +136,7 @@ public class UriEnumerate {
 		this(dictPath, CACHE_SIZE);
 	}
 
-	public int put(String uri) throws Exception {
+	public synchronized int put(String uri) throws Exception {
 		int ord = this.get(uri);
 		if (ord < 0)
 			ord = this.add(uri);
@@ -203,8 +203,11 @@ public class UriEnumerate {
 	private void reOpen() {
 		try {
 			DirectoryReader reader = DirectoryReader.openIfChanged(this.reader, this.writer, false);
-			if (reader != null)
+			if (reader != null) {
+				DirectoryReader oldReader = this.reader;
 				this.reader = reader;
+				oldReader.close();
+			}
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
@@ -224,6 +227,8 @@ public class UriEnumerate {
 		this.writer.commit();
 		this.writer.close();
 		this.writer = null;
+		this.reader.close();
+		this.reader = null;
 	}
 
 	public void commit() throws IOException {
