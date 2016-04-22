@@ -43,7 +43,7 @@ public class OrdField extends Field {
 		ORDFIELD_STORED.setStored(true);
 		ORDFIELD_STORED.freeze();
 
-		// /ORDFIELD_INDEXED.setIndexed(true);
+		// ORDFIELD_INDEXED.setIndexed(true);
 		ORDFIELD_INDEXED.setTokenized(true); // data is never tokenized
 		ORDFIELD_INDEXED.setOmitNorms(true);
 		ORDFIELD_INDEXED.setIndexOptions(IndexOptions.DOCS);
@@ -63,13 +63,18 @@ public class OrdField extends Field {
 
 	@Override
 	public void setIntValue(int ord) {
-		this.token.setValue(ord2bytes(ord));
+		BytesRef value = ord2bytes(ord);
+		this.token.setValue(value);
+		this.fieldsData = value;
 	}
 
 	public static BytesRef ord2bytes(int ord) {
 		return new BytesRef(new byte[] { (byte) (ord >> 24), (byte) (ord >> 16), (byte) (ord >> 8), (byte) ord });
 	}
 
+	
+	// TODO: This is a copy/paste from Lucene only because BinairyTokenStream has become protected in 5.4
+	
 	private static final class BinaryTokenStream extends TokenStream {
 	    private final BytesTermAttribute bytesAtt = addAttribute(BytesTermAttribute.class);
 	    private boolean used = true;
