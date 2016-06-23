@@ -52,8 +52,8 @@ public class MainMassiveURIenumerateProbeer {
 				String uri = uris.get(random.nextInt(i / 10)); // random check
 				assert uri.startsWith("http://");
 			}
-			uris.put("http://" + random.nextInt((int) (N / 10)));
-			// String uri = uris.get(ord);
+			int ord = uris.put("http://" + random.nextInt((int) (N / 10)));
+			//String uri = uris.get(ord);
 		}
 		uris.close();
 	}

@@ -27,12 +27,13 @@ package org.meresco.lucene.numerate;
 import org.apache.lucene.facet.taxonomy.LRUHashMap;
 
 public class Cache {
-	private LRUHashMap<String, Integer> uri2ord;
-	private int adds;
+	LRUHashMap<String, Integer> uri2ord;
+	private int adds = 0;
+	private Runnable batchnotify;
 
-	Cache(int max_cache_size) {
+	Cache(int max_cache_size, Runnable batchnotify) {
+		this.batchnotify = batchnotify;
 		this.uri2ord = new LRUHashMap<String, Integer>(max_cache_size);
-		this.adds = 0;
 	}
 
 	public Integer get(String uri) {
@@ -40,20 +41,23 @@ public class Cache {
 	}
 
 	public Object put(String uri, Integer ord) {
-		this.adds++;
+		this.count();
 		return this.uri2ord.put(uri, ord);
+	}
+
+	private void count() {
+		this.adds++;
+		if (this.overflow()) {
+			this.batchnotify.run(); // this must make sure data is save!
+			this.adds = 0;
+		}
 	}
 
 	public int size() {
 		return this.uri2ord.size();
 	}
 
-	public boolean overflow() {
+	boolean overflow() {
 		return this.adds > this.uri2ord.size();
 	}
-
-	public void reset() {
-		this.adds = 0;
-	}
-
 }
