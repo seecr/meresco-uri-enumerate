@@ -121,18 +121,19 @@ public class NumerateHttpServer {
     static void shutdown(final Server server, final UriEnumerate uriEnumerate) {
         System.out.println("Shutting down termNumerator. Please wait...");
         try {
-            server.stop();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        System.out.println("Http-server stopped");
-        try {
             uriEnumerate.close();
             System.out.println("Shutdown termNumerator completed.");
         } catch (IOException e) {
             e.printStackTrace();
             System.out.println("Shutdown termNumerator failed.");
         }
+        try {
+            // Stop the server after(!) closing Lucene etc.
+            server.stop();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        System.out.println("Http-server stopped");
         System.err.flush();
         System.out.flush();
         System.exit(0);
