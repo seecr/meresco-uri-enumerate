@@ -38,8 +38,8 @@ import org.eclipse.jetty.server.handler.AbstractHandler;
 public class NumerateHandler extends AbstractHandler implements Handler {
     private UriEnumerate uriEnumerate;
 
-    public NumerateHandler(UriEnumerate termNumerator) {
-        this.uriEnumerate = termNumerator;
+    public NumerateHandler(UriEnumerate uriEnumerate) {
+        this.uriEnumerate = uriEnumerate;
     }
 
     @Override

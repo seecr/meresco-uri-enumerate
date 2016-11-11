@@ -26,7 +26,7 @@
 source /usr/share/seecr-tools/functions.d/distro
 
 VERSION=$1
-LUCENEVERSION=5.4.1
+LUCENEVERSION=6.1.0
 JARS=$(find jars -type f -name "*.jar")
 LUCENE_JARS=$(find /usr/share/java -type f -name "lucene-*${LUCENEVERSION}.jar")
 
@@ -41,7 +41,7 @@ mkdir $BUILDDIR
 
 CP="$(echo $JARS | tr ' ' ':'):$(echo $LUCENE_JARS | tr ' ' ':')"
 
-JAVA_VERSION=7
+JAVA_VERSION=8
 javac=/usr/lib/jvm/java-1.${JAVA_VERSION}.0-openjdk.x86_64/bin/javac
 if [ -f /etc/debian_version ]; then
     javac=/usr/lib/jvm/java-${JAVA_VERSION}-openjdk-amd64/bin/javac

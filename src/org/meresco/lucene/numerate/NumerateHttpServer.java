@@ -45,8 +45,8 @@ import org.eclipse.jetty.util.thread.ExecutorThreadPool;
 import sun.misc.Signal;
 import sun.misc.SignalHandler;
 
-public class NumerateHttpServer {
 
+public class NumerateHttpServer {
     public static void main(String[] args) throws Exception {
         Options options = new Options();
 
@@ -107,12 +107,14 @@ public class NumerateHttpServer {
             }
         }
         Signal.handle(new Signal("TERM"), new SignalHandler() {
-            public void handle(Signal sig) {
+            @Override
+			public void handle(Signal sig) {
                 shutdown(server, uriEnumerate);
             }
         });
         Signal.handle(new Signal("INT"), new SignalHandler() {
-            public void handle(Signal sig) {
+            @Override
+			public void handle(Signal sig) {
                 shutdown(server, uriEnumerate);
             }
         });

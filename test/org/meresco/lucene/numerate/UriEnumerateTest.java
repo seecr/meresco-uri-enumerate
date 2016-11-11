@@ -29,13 +29,14 @@ import static org.junit.Assert.assertEquals;
 import java.io.File;
 import java.io.IOException;
 
+import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class UriUnumerateTest {
 
+public class UriEnumerateTest {
 	private static final String TESTDIR = "urienumeratetest";
 	private UriEnumerate enumerate;
 
@@ -45,6 +46,9 @@ public class UriUnumerateTest {
 
 	@Before
 	public void setUp() throws Exception {
+		if (new File(TESTDIR).exists()) {
+			FileUtils.deleteDirectory(new File(TESTDIR));
+		}
 		this.enumerate = new UriEnumerate(TESTDIR, 2);
 	}
 
@@ -54,11 +58,11 @@ public class UriUnumerateTest {
 			this.enumerate.close();
 		} catch (Exception e) {
 		}
-		TestUtils.deleteDirectory(new File(TESTDIR));
+		FileUtils.deleteDirectory(new File(TESTDIR));
 	}
 
 	@Test
-	public void testUniqueSequantialNumbers() throws Exception {
+	public void testUniqueSequentialNumbers() throws Exception {
 		assertEquals(1, this.enumerate.put("uri:a:1"));
 		assertEquals("uri:a:1", this.enumerate.get(1));
 		assertEquals(1, this.enumerate.put("uri:a:1"));
@@ -70,16 +74,21 @@ public class UriUnumerateTest {
 		assertEquals(1, this.enumerate.put("uri:a:1"));
 		assertEquals("uri:a:1", this.enumerate.get(1));
 		this.enumerate.close();
-		UriEnumerate e2 = new UriEnumerate(TESTDIR, 1);
-		assertEquals(2, e2.put("uri:a:2"));
-		assertEquals("uri:a:2", e2.get(2));
-		assertEquals(1, e2.put("uri:a:1"));
-		assertEquals("uri:a:1", e2.get(1));
-		assertEquals(3, e2.put("uri:a:3"));
-		assertEquals("uri:a:3", e2.get(3));
-		assertEquals(3, e2.put("uri:a:3"));
-		assertEquals("uri:a:1", e2.get(1));
-		e2.close();
+		this.enumerate = new UriEnumerate(TESTDIR, 1);
+		assertEquals(2, this.enumerate.put("uri:a:2"));
+		assertEquals("uri:a:2", this.enumerate.get(2));
+		assertEquals(1, this.enumerate.put("uri:a:1"));
+		assertEquals("uri:a:1", this.enumerate.get(1));
+		assertEquals(3, this.enumerate.put("uri:a:3"));
+		assertEquals("uri:a:3", this.enumerate.get(3));
+		assertEquals(3, this.enumerate.put("uri:a:3"));
+		assertEquals("uri:a:1", this.enumerate.get(1));
+		assertEquals(2, this.enumerate.put("uri:a:2"));
+		assertEquals("uri:a:2", this.enumerate.get(2));
+		assertEquals(1, this.enumerate.put("uri:a:1"));
+		assertEquals("uri:a:1", this.enumerate.get(1));
+		assertEquals(3, this.enumerate.put("uri:a:3"));
+		assertEquals("uri:a:3", this.enumerate.get(3));
 	}
 
 	@Test
@@ -130,7 +139,7 @@ public class UriUnumerateTest {
 		dict.put("Aap", 15);
 		dict.put("Mies", 21);
 		dict.put("Noot", 42);
-		assertEquals(15, dict.get("Aap")); // moet gesorteerd zijn....
+		assertEquals(15, dict.get("Aap"));  // moet gesorteerd zijn....
 		assertEquals(21, dict.get("Mies"));
 		assertEquals(42, dict.get("Noot"));
 
@@ -140,22 +149,76 @@ public class UriUnumerateTest {
 	public void testCache() throws Exception {
 		assertEquals(0, this.enumerate.size());
 		assertEquals(0, this.enumerate.cache.size());
-		assertEquals(false, this.enumerate.cache.overflow());
+		assertEquals(false, this.enumerate.cache.overflowed());
 		this.enumerate.put("urn:a:1");
 		assertEquals(1, this.enumerate.size());
 		assertEquals(1, this.enumerate.cache.size());
-		assertEquals(false, this.enumerate.cache.overflow());
+		assertEquals(false, this.enumerate.cache.overflowed());
 		assertEquals("{urn:a:1=1}", this.enumerate.cache.uri2ord.toString());
 		this.enumerate.put("urn:a:2");
 		assertEquals(2, this.enumerate.size());
 		assertEquals(2, this.enumerate.cache.size());
-		assertEquals(false, this.enumerate.cache.overflow());
+		assertEquals(false, this.enumerate.cache.overflowed());
 		assertEquals("{urn:a:1=1, urn:a:2=2}", this.enumerate.cache.uri2ord.toString());
 		this.enumerate.put("urn:a:3");
 		assertEquals(3, this.enumerate.size());
 		assertEquals(2, this.enumerate.cache.size());
-		assertEquals(false, this.enumerate.cache.overflow());
+		assertEquals(false, this.enumerate.cache.overflowed());
 		assertEquals("{urn:a:2=2, urn:a:3=3}", this.enumerate.cache.uri2ord.toString());
 		assertEquals("urn:a:1", this.enumerate.get(1));
+	}
+
+	@Test
+	public void testRecoverFromCrash() throws Exception {
+		this.enumerate.close();
+		int MAX_VALUE = 6;
+		for (int i = 1; i < MAX_VALUE; i++) {
+			this.enumerate = new UriEnumerate(TESTDIR, 2);
+			for (int j = 1; j < i; j++) {
+				assertEquals(j, this.enumerate.put("uri:a:" + j));
+			}
+			simulateCrash();
+			this.enumerate = new UriEnumerate(TESTDIR, 2);
+			for (int j = i; j < MAX_VALUE; j++) {
+				assertEquals(j, this.enumerate.put("uri:a:" + j));
+			}
+			for (int j = 1; j < i; j++) {
+				assertEquals(j, this.enumerate.put("uri:a:" + j));
+			}
+			this.enumerate.close();
+			FileUtils.deleteDirectory(new File(TESTDIR));
+		}
+	}
+
+	@Test
+	public void testFailsToRecoverFromCrashWhenNoTransactionLog() throws Exception {
+		this.enumerate.close();
+		this.enumerate = new UriEnumerate(TESTDIR, 2, /* withTransactionLog */ false);
+		assertEquals(1, this.enumerate.put("uri:a:1"));
+		assertEquals(2, this.enumerate.put("uri:a:2"));
+		simulateCrash();
+		this.enumerate = new UriEnumerate(TESTDIR, 2, false);
+		assertEquals(1, this.enumerate.put("uri:a:3"));  // undesirable, so that's where the transaction log comes in (but without is faster).
+	}
+
+	private void simulateCrash() {
+		String tmpDir = TESTDIR + "_tmp";
+		try {
+			FileUtils.copyDirectory(new File(TESTDIR), new File(tmpDir));
+			this.enumerate.close();
+			this.enumerate = null;
+			FileUtils.deleteDirectory(new File(TESTDIR));
+			FileUtils.copyDirectory(new File(tmpDir), new File(TESTDIR));
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		} finally {
+			if (new File(tmpDir).exists()) {
+				try {
+					FileUtils.deleteDirectory(new File(tmpDir));
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
 	}
 }

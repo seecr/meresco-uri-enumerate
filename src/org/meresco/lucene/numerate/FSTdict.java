@@ -35,8 +35,8 @@ import org.apache.lucene.util.fst.FST;
 import org.apache.lucene.util.fst.PositiveIntOutputs;
 import org.apache.lucene.util.fst.Util;
 
-public class FSTdict {
 
+public class FSTdict {
     private Builder<Long> fstbuilder = new Builder<>(FST.INPUT_TYPE.BYTE4,
             PositiveIntOutputs.getSingleton());
     private IntsRefBuilder scratch = new IntsRefBuilder();
