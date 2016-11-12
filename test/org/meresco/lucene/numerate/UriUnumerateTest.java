@@ -29,13 +29,14 @@ import static org.junit.Assert.assertEquals;
 import java.io.File;
 import java.io.IOException;
 
+import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class UriUnumerateTest {
 
+public class UriUnumerateTest {
     private static final String TESTDIR = "urienumeratetest";
     private UriEnumerate enumerate;
 
@@ -133,6 +134,59 @@ public class UriUnumerateTest {
         assertEquals(15, dict.get("Aap")); // moet gesorteerd zijn....
         assertEquals(21, dict.get("Mies"));
         assertEquals(42, dict.get("Noot"));
-
     }
+
+	@Test
+	public void testRecoverFromCrash() throws Exception {
+		this.enumerate.close();
+		int MAX_VALUE = 6;
+		for (int i = 1; i < MAX_VALUE; i++) {
+			this.enumerate = new UriEnumerate(TESTDIR, 2);
+			for (int j = 1; j < i; j++) {
+				assertEquals(j, this.enumerate.put("uri:a:" + j));
+			}
+			simulateCrash();
+			this.enumerate = new UriEnumerate(TESTDIR, 2);
+			for (int j = i; j < MAX_VALUE; j++) {
+				assertEquals(j, this.enumerate.put("uri:a:" + j));
+			}
+			for (int j = 1; j < i; j++) {
+				assertEquals(j, this.enumerate.put("uri:a:" + j));
+			}
+			this.enumerate.close();
+			FileUtils.deleteDirectory(new File(TESTDIR));
+		}
+	}
+
+	@Test
+	public void testFailsToRecoverFromCrashWhenNoTransactionLog() throws Exception {
+		this.enumerate.close();
+		this.enumerate = new UriEnumerate(TESTDIR, 2, /* withTransactionLog */ false);
+		assertEquals(1, this.enumerate.put("uri:a:1"));
+		assertEquals(2, this.enumerate.put("uri:a:2"));
+		simulateCrash();
+		this.enumerate = new UriEnumerate(TESTDIR, 2, false);
+		assertEquals(1, this.enumerate.put("uri:a:3"));  // undesirable, so that's where the transaction log comes in (but without is faster).
+	}
+
+	private void simulateCrash() {
+		String tmpDir = TESTDIR + "_tmp";
+		try {
+			FileUtils.copyDirectory(new File(TESTDIR), new File(tmpDir));
+			this.enumerate.close();
+			this.enumerate = null;
+			FileUtils.deleteDirectory(new File(TESTDIR));
+			FileUtils.copyDirectory(new File(tmpDir), new File(TESTDIR));
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		} finally {
+			if (new File(tmpDir).exists()) {
+				try {
+					FileUtils.deleteDirectory(new File(tmpDir));
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
 }

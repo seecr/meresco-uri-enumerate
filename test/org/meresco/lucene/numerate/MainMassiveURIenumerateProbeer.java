@@ -28,14 +28,14 @@ import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.Random;
 
-public class MainMassiveURIenumerateProbeer {
 
+public class MainMassiveURIenumerateProbeer {
 	private static final int CACHE_SIZE = 1000 * 1000;
 	private static final double N = 1000 * 1000 * 1000;
 	private static final long INTERVAL = 100 * 1000;
 
 	public static void main(String[] args) throws Exception {
-		String name = "/home/erik/host/no-backup/lucene-jena-pruts";
+		String name = "uri-enumerate-probeer";
 		Path path = FileSystems.getDefault().getPath(name);
 		UriEnumerate uris = new UriEnumerate(path, CACHE_SIZE);
 

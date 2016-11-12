@@ -27,10 +27,12 @@ package org.meresco.lucene.numerate;
 import org.apache.lucene.facet.taxonomy.LRUHashMap;
 
 public class Cache {
+	int max_cache_size;
 	private LRUHashMap<String, Integer> uri2ord;
 	private int adds;
 
 	Cache(int max_cache_size) {
+		this.max_cache_size = max_cache_size;
 		this.uri2ord = new LRUHashMap<String, Integer>(max_cache_size);
 		this.adds = 0;
 	}
@@ -49,7 +51,7 @@ public class Cache {
 	}
 
 	public boolean overflow() {
-		return this.adds > this.uri2ord.size();
+		return this.adds > this.max_cache_size;
 	}
 
 	public void reset() {

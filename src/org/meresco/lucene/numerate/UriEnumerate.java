@@ -24,7 +24,15 @@
 
 package org.meresco.lucene.numerate;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.Map;
@@ -51,8 +59,8 @@ import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.BytesRef;
 
-public class UriEnumerate {
 
+public class UriEnumerate {
 	private static final int CACHE_SIZE = 1 * 1000;
 	private static final String URI_FIELD = "uri_index";
 	private static final String ORD_INDEX_FIELD = "ord_index";
@@ -77,7 +85,6 @@ public class UriEnumerate {
 	}
 
 	private static final class Hit {
-
 		private final LeafReader reader;
 		private final int doc;
 
@@ -93,8 +100,9 @@ public class UriEnumerate {
 	private Cache cache;
 	private int next_ord;
 	private DirectoryReader reader;
+	private TransactionLog transactionLog;
 
-	public UriEnumerate(Path path, int max_cache_size) throws IOException {
+	public UriEnumerate(Path path, int max_cache_size, boolean withTransactionLog) throws IOException {
 		IndexWriterConfig config = new IndexWriterConfig(null);
 		/*
 		 * The idea behind this merge config is to avoid useless background merging and instead synchronize merging with the reopen calls. For now, all merging happens when openIfChanged is called,
@@ -122,19 +130,30 @@ public class UriEnumerate {
 		this.reader = DirectoryReader.open(this.writer, false);
 		this.cache = new Cache(max_cache_size);
 		this.next_ord = writer.numDocs() + 1;
+		this.transactionLog = new TransactionLog(withTransactionLog ? path + "/transactionLog" : null);
+		this.transactionLog.maybeRecover();
 	}
 
-	public UriEnumerate(String string, int cache_size) throws IOException {
-		this(FileSystems.getDefault().getPath(string), cache_size);
+	public UriEnumerate(Path path, int cacheSize) throws IOException {
+		this(path, cacheSize, true);
+	}
+
+	public UriEnumerate(Path dictPath) throws IOException {
+		this(dictPath, CACHE_SIZE);
+	}
+
+	public UriEnumerate(String path, int cacheSize, boolean withTransactionLog) throws IOException {
+		this(FileSystems.getDefault().getPath(path), cacheSize, withTransactionLog);
+	}
+
+	public UriEnumerate(String path, int cacheSize) throws IOException {
+		this(FileSystems.getDefault().getPath(path), cacheSize);
 	}
 
 	public UriEnumerate(String path) throws IOException {
 		this(path, CACHE_SIZE);
 	}
 
-	public UriEnumerate(Path dictPath) throws IOException {
-		this(dictPath, CACHE_SIZE);
-	}
 
 	public synchronized int put(String uri) throws Exception {
 		int ord = this.get(uri);
@@ -147,7 +166,7 @@ public class UriEnumerate {
 		Integer ord = this.cache.get(uri);
 		if (ord != null)
 			return ord;
-		this.maybeReopen();
+		this.maybeCommit();
 		ord = this.search(uri);
 		if (ord >= 0)
 			this.cache.put(uri, ord);
@@ -183,20 +202,25 @@ public class UriEnumerate {
 		return null;
 	}
 
-	private int add(String uri) throws Exception {
-		int ord = this.next_ord++;
-		this.doc_proto.set(uri, ord);
-		writer.addDocument(this.doc_proto.doc);
-		if (this.cache.put(uri, ord) != null)
-			throw new RuntimeException("Why did this happen? No unit-test throws me!");
-		this.maybeReopen();
-		return ord;
-	}
+    private int add(String uri) throws Exception {
+        int ord = this.next_ord++;
+        this.transactionLog.write(uri, ord);
+        add(uri, ord);
+        this.maybeCommit();
+        return ord;
+    }
 
-	private void maybeReopen() {
+    void add(String uri, int ord) throws IOException {
+        this.doc_proto.set(uri, ord);
+        writer.addDocument(this.doc_proto.doc);
+        if (this.cache.put(uri, ord) != null) {
+            throw new RuntimeException("Why did this happen? No unit-test throws me!");
+        }
+    }
+
+	private void maybeCommit() {
 		if (this.cache.overflow()) { // all cache might be invalid
-			this.reOpen();
-			this.cache.reset();
+			this.commit();
 		}
 	}
 
@@ -223,19 +247,99 @@ public class UriEnumerate {
 		return ords;
 	}
 
-	public void close() throws IOException {
-		this.writer.commit();
-		this.writer.close();
-		this.writer = null;
-		this.reader.close();
-		this.reader = null;
-	}
+    public void close() throws IOException {
+        this.commit();
+        this.writer.close();
+        this.writer = null;
+        this.reader.close();
+        this.reader = null;
+        this.transactionLog.close();
+        this.transactionLog = null;
+    }
 
-	public void commit() throws IOException {
-		this.writer.commit();
-	}
+    public void commit() {
+        try {
+            this.writer.commit();
+            this.transactionLog.erase();
+		    this.cache.reset();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        this.reOpen();
+    }
 
 	public int size() {
 		return this.writer.numDocs();
+	}
+
+	public void updateNextOrd(int minimalNextOrd) {
+		this.next_ord = Math.max(this.next_ord, minimalNextOrd);
+	}
+
+
+	class TransactionLog {
+		String path;
+		PrintWriter out;
+
+		public TransactionLog(String transactionLogPath) throws IOException {
+			this.path = transactionLogPath;
+		}
+
+		public void write(String uri, int ord) {
+			if (this.path == null) {
+				return;
+			}
+			if (this.out == null) {
+				this.startNew();
+			}
+			this.out.println("" + ord + " " + uri);
+			this.out.flush();
+		}
+
+		private void startNew() {
+			try {
+				this.out = new PrintWriter(
+						new BufferedWriter(
+								new OutputStreamWriter(
+										new FileOutputStream(this.path), "UTF-8")));
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+		}
+
+		public void close() {
+			if (this.out != null) {
+				this.out.close();
+				this.out = null;
+			}
+		}
+
+		public void erase() {
+			this.close();
+			if (this.path != null && new File(this.path).exists()) {
+				new File(this.path).delete();
+			}
+		}
+
+		public void maybeRecover() throws IOException {
+			if (this.path == null || !new File(this.path).exists()) {
+				return;
+			}
+			int ord = 0;
+			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(this.path), "UTF-8"));
+			String line;
+			while ((line = reader.readLine()) != null) {
+				String[] parts = line.split("\\s", 2);
+				try {
+					String uri = parts[1];
+					ord = Integer.valueOf(parts[0]);
+					UriEnumerate.this.add(uri, ord);
+				} catch (ArrayIndexOutOfBoundsException e) {
+					break;
+				}
+			}
+			UriEnumerate.this.updateNextOrd(ord + 1);
+			reader.close();
+		}
 	}
 }

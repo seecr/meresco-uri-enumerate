@@ -67,4 +67,4 @@ class IntegrationState(SeecrIntegrationState):
             exit(1)
 
     def startNumerateServer(self):
-        self._startServer('numerate-server', self.binPath('start-numerate-server'), 'http://localhost:{}/info'.format(self.numerateServerPort), port=self.numerateServerPort, stateDir=join(self.integrationTempdir, 'numerate'))
+        self._startServer('numerate-server', self.binPath('start-uri-numerate-server'), 'http://localhost:{}/info'.format(self.numerateServerPort), port=self.numerateServerPort, stateDir=join(self.integrationTempdir, 'numerate'))
