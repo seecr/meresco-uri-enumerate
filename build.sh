@@ -42,13 +42,20 @@ mkdir $BUILDDIR
 CP="$(echo $JARS | tr ' ' ':'):$(echo $LUCENE_JARS | tr ' ' ':')"
 
 JAVA_VERSION=8
-javac=/usr/lib/jvm/java-1.${JAVA_VERSION}.0-openjdk.x86_64/bin/javac
-if [ -f /etc/debian_version ]; then
-    javac=/usr/lib/jvm/java-${JAVA_VERSION}-openjdk-amd64/bin/javac
+if [ -z "${JAVAC_BIN}" ]; then
+    JAVAC_BIN=/usr/lib/jvm/java-1.${JAVA_VERSION}.0-openjdk.x86_64/bin
+    if [ -f /etc/debian_version ]; then
+        JAVAC_BIN=/usr/lib/jvm/java-${JAVA_VERSION}-openjdk-amd64/bin
+    fi
+fi
+${JAVAC_BIN}/javac -version 2>&1 | grep "1.${JAVA_VERSION}" > /dev/null
+if [ $? -ne 0 ]; then
+    echo "javac version should be java ${JAVA_VERSION}; You could specify a different javac with JAVAC_BIN"
+    exit 1
 fi
 
 javaFiles=$(find src/org -name "*.java")
-${javac} -d $BUILDDIR -cp $CP $javaFiles
+${JAVAC_BIN}/javac -d $BUILDDIR -cp $CP $javaFiles
 if [ "$?" != "0" ]; then
     echo "Build failed"
     exit 1
