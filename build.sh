@@ -26,7 +26,7 @@
 source /usr/share/seecr-tools/functions.d/distro
 
 VERSION=$1
-LUCENEVERSION=6.1.0
+LUCENEVERSION=7.3.0
 JARS=$(find jars -type f -name "*.jar")
 LUCENE_JARS=$(find /usr/share/java -type f -name "lucene-*${LUCENEVERSION}.jar")
 
