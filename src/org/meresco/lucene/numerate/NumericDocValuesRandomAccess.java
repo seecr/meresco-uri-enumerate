@@ -26,7 +26,7 @@ public class NumericDocValuesRandomAccess {
 
 	public long get(int docID) {
 		try {
-			if (docID < this.lastDocID && this.name != null) {
+			if ((docID < this.lastDocID || docID == 0 && this.lastDocID == 0) && this.name != null ) {
 				if (lastDocID != Integer.MAX_VALUE) {
 					System.out.println("DEBUG reread needed, because non-ascending access: " + lastDocID + ", " + docID);
 				}
@@ -38,7 +38,7 @@ public class NumericDocValuesRandomAccess {
 				//}
 			}
 			if (this.numericDocValues == null || !this.numericDocValues.advanceExact(docID)) {
-				return 0;  // mimics behaviour of e.g. the old DocValues.emptyNumeric()
+				return 666;  // mimics behaviour of e.g. the old DocValues.emptyNumeric()
 			}
 			this.lastDocID = docID;
 			return this.numericDocValues.longValue();
