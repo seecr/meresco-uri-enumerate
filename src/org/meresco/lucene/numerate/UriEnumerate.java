@@ -38,7 +38,7 @@ import java.nio.file.Path;
 
 import org.apache.lucene.codecs.PostingsFormat;
 import org.apache.lucene.codecs.bloom.BloomFilteringPostingsFormat;
-import org.apache.lucene.codecs.lucene60.Lucene60Codec;
+import org.apache.lucene.codecs.lucene70.Lucene70Codec;
 import org.apache.lucene.index.ConcurrentMergeScheduler;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
@@ -75,7 +75,7 @@ public class UriEnumerate {
 		mp.setMergeFactor(2);
 		mp.setMinMergeDocs(max_cache_size);
 		config.setMergePolicy(mp);
-		config.setCodec(new Lucene60Codec() {
+		config.setCodec(new Lucene70Codec() {
 			@Override
 			public PostingsFormat getPostingsFormatForField(String field) {
 				return new BloomFilteringPostingsFormat(super.getPostingsFormatForField(field));
