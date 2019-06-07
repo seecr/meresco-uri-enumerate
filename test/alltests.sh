@@ -56,7 +56,7 @@ if [ ! -f ${JUNIT} ]; then
 fi
 
 JARS=$(find ../jars -type f -name "*.jar")
-LUCENEVERSION=6.1.0
+LUCENEVERSION=7.3.0
 LUCENE_JARS=$(find /usr/share/java -type f -name "lucene-*${LUCENEVERSION}.jar")
 
 CP="$JUNIT:$(echo $JARS | tr ' ' ':'):$(echo $LUCENE_JARS | tr ' ' ':'):../build"

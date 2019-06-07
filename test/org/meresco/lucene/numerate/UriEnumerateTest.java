@@ -85,7 +85,9 @@ public class UriEnumerateTest {
 		assertEquals("uri:a:1", this.enumerate.get(1));
 		assertEquals(2, this.enumerate.put("uri:a:2"));
 		assertEquals("uri:a:2", this.enumerate.get(2));
+		System.out.println("-- Culprit");
 		assertEquals(1, this.enumerate.put("uri:a:1"));
+		System.out.println("-- tot zover");
 		assertEquals("uri:a:1", this.enumerate.get(1));
 		assertEquals(3, this.enumerate.put("uri:a:3"));
 		assertEquals("uri:a:3", this.enumerate.get(3));
@@ -178,11 +180,14 @@ public class UriEnumerateTest {
 				assertEquals(j, this.enumerate.put("uri:a:" + j));
 			}
 			simulateCrash();
+			System.out.println("Crashed");
 			this.enumerate = new UriEnumerate(TESTDIR, 2);
 			for (int j = i; j < MAX_VALUE; j++) {
 				assertEquals(j, this.enumerate.put("uri:a:" + j));
 			}
+			System.out.println("Still there?");
 			for (int j = 1; j < i; j++) {
+				System.out.println("Knettergek");
 				assertEquals(j, this.enumerate.put("uri:a:" + j));
 			}
 			this.enumerate.close();

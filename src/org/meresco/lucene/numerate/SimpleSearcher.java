@@ -28,11 +28,13 @@ public class SimpleSearcher {
 
 	private DirectoryReader reader = null;
 	private IndexWriter writer;
-	private Map<Object, NumericDocValues> ordscache = new WeakHashMap<Object, NumericDocValues>();
+	//private Map<Object, NumericDocValues> ordscache = new WeakHashMap<Object, NumericDocValues>();
+	private NumericDocValuesRandomAccess keyValues;
 
 	public SimpleSearcher(IndexWriter writer) throws IOException {
 		this.writer = writer;
 		this.reader = DirectoryReader.open(writer, true, true);
+		//this.keyValues = new NumericDocValuesRandomAccess(reader, UriEnumerate.ORD_VALUE_FIELD);
 	}
 
 	public Hit search(String field, BytesRef text) throws Exception {
@@ -50,13 +52,16 @@ public class SimpleSearcher {
 
 	public int search(String uri) throws Exception {
 		Hit hit = this.search(UriEnumerate.URI_FIELD, new BytesRef(uri));
-		if (hit != null)
-			return (int) this.getOrds(hit.reader).get(hit.doc);
+		if (hit != null) {
+			if (this.keyValues == null) {
+				this.keyValues = new NumericDocValuesRandomAccess(hit.reader, UriEnumerate.ORD_VALUE_FIELD);
+			}
+			return (int) this.keyValues.get(hit.doc);
+		}
 		return -1;
-
 	}
 
-	private NumericDocValues getOrds(LeafReader reader) throws IOException {
+	/*private NumericDocValues getOrds(LeafReader reader) throws IOException {
 		Object key = reader.getCoreCacheKey();
 		NumericDocValues ords = this.ordscache.get(key);
 		if (ords == null) {
@@ -64,16 +69,18 @@ public class SimpleSearcher {
 			this.ordscache.put(key, ords);
 		}
 		return ords;
-	}
+	}*/
 
 	void reOpen() {
 		try {
-			// System.out.println("RE-OPEN");
 			DirectoryReader reader = DirectoryReader.openIfChanged(this.reader, this.writer, true);
 			if (reader != null) {
+				System.out.println("Reopened");
 				DirectoryReader oldReader = this.reader;
 				this.reader = reader;
 				oldReader.close();
+			} else {
+				System.out.println("Bitch ain't here");
 			}
 		} catch (IOException e) {
 			throw new RuntimeException(e);
