@@ -56,6 +56,7 @@ public class SimpleSearcher {
 			if (this.keyValues == null) {
 				this.keyValues = new NumericDocValuesRandomAccess(hit.reader, UriEnumerate.ORD_VALUE_FIELD);
 			}
+			System.out.printf("Hit!: %s | %s -%n", new Object[]{uri, hit.doc});
 			return (int) this.keyValues.get(hit.doc);
 		}
 		return -1;
@@ -75,12 +76,9 @@ public class SimpleSearcher {
 		try {
 			DirectoryReader reader = DirectoryReader.openIfChanged(this.reader, this.writer, true);
 			if (reader != null) {
-				System.out.println("Reopened");
 				DirectoryReader oldReader = this.reader;
 				this.reader = reader;
 				oldReader.close();
-			} else {
-				System.out.println("Bitch ain't here");
 			}
 		} catch (IOException e) {
 			throw new RuntimeException(e);
