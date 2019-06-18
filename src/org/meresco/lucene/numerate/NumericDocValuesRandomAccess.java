@@ -2,18 +2,14 @@ package org.meresco.lucene.numerate;
 
 import java.io.IOException;
 
-import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.LeafReader;
-import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.NumericDocValues;
 
 /**
  *  Wraps a NumericDocValues instance (as read from a LeafReader by name) to provide old-style random access the way we depend on it.
  *  
- *  TODO: verify that we really need it and measure performance penalty.
  */
 public class NumericDocValuesRandomAccess {
-	//private DirectoryReader dirreader;
 	private LeafReader reader;
 	private String name;
 	private NumericDocValues numericDocValues;
@@ -30,15 +26,10 @@ public class NumericDocValuesRandomAccess {
 				if (lastDocID != Integer.MAX_VALUE) {
 					System.out.println("DEBUG reread needed, because non-ascending access: " + lastDocID + ", " + docID);
 				}
-				//for (LeafReaderContext leaf : this.dirreader.leaves() ) {
-				System.out.println("readink");
-					//LeafReader leafreader = leaf.reader();
 				this.numericDocValues = this.reader.getNumericDocValues(this.name);
-				    //System.out.println(this.numericDocValues);
-				//}
 			}
 			if (this.numericDocValues == null || !this.numericDocValues.advanceExact(docID)) {
-				return 666;  // mimics behaviour of e.g. the old DocValues.emptyNumeric()
+				return 0;  // mimics behaviour of e.g. the old DocValues.emptyNumeric()
 			}
 			this.lastDocID = docID;
 			return this.numericDocValues.longValue();
