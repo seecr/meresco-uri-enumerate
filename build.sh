@@ -29,7 +29,6 @@ VERSION=$1
 LUCENEVERSION=7.3.0
 JARS=$(find jars -type f -name "*.jar")
 LUCENE_JARS=$(find /usr/share/java -type f -name "lucene-*${LUCENEVERSION}.jar")
-echo $JARS
 
 BUILDDIR=./build
 TARGET=meresco-uri-enumerate.jar
