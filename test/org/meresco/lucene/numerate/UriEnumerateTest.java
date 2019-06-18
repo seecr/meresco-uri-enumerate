@@ -87,9 +87,7 @@ public class UriEnumerateTest {
 		assertEquals("uri:a:2", this.enumerate.get(2));
 		assertEquals(1, this.enumerate.put("uri:a:1"));
 		assertEquals("uri:a:1", this.enumerate.get(1));
-		System.out.println("-- Culprit");
 		assertEquals(3, this.enumerate.put("uri:a:3"));
-		System.out.println("-- tot zover");
 		assertEquals("uri:a:3", this.enumerate.get(3));
 	}
 
